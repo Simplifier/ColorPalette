@@ -50,6 +50,7 @@ package components {
 			var delta:int = 0x000100;
 			var py:int;
 
+			controlPixels.lock();
 			for (var i:int; i < 1536; i++) {
 				if (col == 0xffff00)
 					delta = -0x010000;
@@ -70,52 +71,43 @@ package components {
 						controlPixels.setPixel(py, i / 6, col);
 					}
 			}
+			controlPixels.unlock();
 		}
 
 		private function createPalette(targetCol:uint, startCol:uint = 0xffffff):void {
-			var ssR:Number = (startCol >> 16) & 0xff;
-			var ssG:Number = (startCol >> 8) & 0xff;
-			var ssB:Number = startCol & 0xff;
-			var colR:uint;
-			var colG:uint;
-			var colB:uint;
-			const red:uint = (targetCol >> 16) & 0xFF;
-			const green:uint = (targetCol >> 8) & 0xFF;
-			const blue:uint = targetCol & 0xFF;
-			const indexR:Number = (ssR - red) / 256;
-			const indexG:Number = (ssG - green) / 256;
-			const indexB:Number = (ssB - blue) / 256;
+			var rowR:Number = (startCol >> 16) & 0xff;
+			var rowG:Number = (startCol >> 8) & 0xff;
+			var rowB:Number = startCol & 0xff;
+			const targetR:uint = (targetCol >> 16) & 0xFF;
+			const targetG:uint = (targetCol >> 8) & 0xFF;
+			const targetB:uint = targetCol & 0xFF;
 
-			for (var i:int = 0; i < 256; i++) {
-				var ay:int = 0;
-				var ss2R:uint = colR;
-				var ss2G:uint = colG;
-				var ss2B:uint = colB;
-				var index2R:Number = ss2R / 256;
-				var index2G:Number = ss2G / 256;
-				var index2B:Number = ss2B / 256;
-				var col2R:uint;
-				var col2G:uint;
-				var col2B:uint;
+			const deltaRByX:Number = (rowR - targetR) / 256;
+			const deltaGByX:Number = (rowG - targetG) / 256;
+			const deltaBByX:Number = (rowB - targetB) / 256;
 
-				ssR -= indexR;
-				ssG -= indexG;
-				ssB -= indexB;
-				colR = ssR;
-				colG = ssG;
-				colB = ssB;
+			palettePixels.lock();
+			for (var x:int = 0; x < 256; x++) {
+				var r:Number = Math.round(rowR);
+				var g:Number = Math.round(rowG);
+				var b:Number = Math.round(rowB);
+				var deltaRByY:Number = r / 256;
+				var deltaGByY:Number = g / 256;
+				var deltaBByY:Number = b / 256;
 
-				for (var k:int = 0; k < 256; k++) {
-					palettePixels.setPixel(i, ay, col2R * 0x10000 + col2G * 0x100 + col2B);
-					ss2R -= index2R;
-					ss2G -= index2G;
-					ss2B -= index2B;
-					col2R = ss2R;
-					col2G = ss2G;
-					col2B = ss2B;
-					ay++;
+				rowR -= deltaRByX;
+				rowG -= deltaGByX;
+				rowB -= deltaBByX;
+
+				for (var y:int = 0; y < 256; y++) {
+					palettePixels.setPixel(x, y, Math.round(r) * 0x10000 + Math.round(g) * 0x100 + Math.round(b));
+
+					r -= deltaRByY;
+					g -= deltaGByY;
+					b -= deltaBByY;
 				}
 			}
+			palettePixels.unlock();
 		}
 
 		private function leftControl_overHandler(e:MouseEvent):void {
